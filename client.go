@@ -2,25 +2,28 @@ package bqclient
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/juju/loggo"
 
 	"cloud.google.com/go/bigquery"
+
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
 
 var logger = loggo.GetLogger("bigquery")
 
+// Client -
 type Client struct {
 	bq  *bigquery.Client
 	ctx *context.Context
 }
 
-//Save() (row map[string]Value, insertID string, err error)
-
+// Row -
 type Row map[string]interface{}
 
+// Save -
 func (r Row) Save() (row map[string]bigquery.Value, insertID string, err error) {
 	rows := make(map[string]bigquery.Value, len(r))
 	for k, v := range r {
@@ -29,12 +32,13 @@ func (r Row) Save() (row map[string]bigquery.Value, insertID string, err error) 
 	return rows, "", nil
 }
 
+// InsertRow -
 func (c Client) InsertRow(dataset, table string, data Row) error {
 
 	initial := c.bq.Dataset(dataset)
 	tbl := initial.Table(table)
 
-	u := tbl.NewUploader()
+	u := tbl.Uploader()
 	if err := u.Put(*c.ctx, data); err != nil {
 		return err
 	}
@@ -42,11 +46,12 @@ func (c Client) InsertRow(dataset, table string, data Row) error {
 	return nil
 }
 
+// InsertRows -
 func (c Client) InsertRows(dataset, table string, data []Row) error {
 	initial := c.bq.Dataset(dataset)
 	tbl := initial.Table(table)
 
-	u := tbl.NewUploader()
+	u := tbl.Uploader()
 	if err := u.Put(*c.ctx, data); err != nil {
 		return err
 	}
@@ -54,6 +59,7 @@ func (c Client) InsertRows(dataset, table string, data []Row) error {
 	return nil
 }
 
+// Query -
 func (c Client) Query(query string, limit int) ([][]interface{}, error) {
 
 	q := c.bq.Query(query)
@@ -65,39 +71,40 @@ func (c Client) Query(query string, limit int) ([][]interface{}, error) {
 		return nil, err
 	}
 
-	for it.Next(*c.ctx) {
-		var values bigquery.ValueList
+	for {
 
-		err := it.Get(&values)
-
+		var row []bigquery.Value
+		err := it.Next(&row)
 		if err == iterator.Done {
 			break
 		}
-
 		if err != nil {
 			return nil, err
 		}
+		fmt.Println(row)
 
-		row := make([]interface{}, 0, len(values))
-		for _, v := range values {
-			row = append(row, v)
+		newRow := make([]interface{}, 0, len(row))
+		for _, v := range row {
+			newRow = append(newRow, v)
 		}
 
-		results = append(results, row)
+		results = append(results, newRow)
 	}
 
 	return results, nil
 }
 
+// CreateDataset -
 func (c Client) CreateDataset(dataset string) error {
 
 	initial := c.bq.Dataset(dataset)
-	if err := initial.Create(*c.ctx); err != nil {
+	if err := initial.Create(*c.ctx, &bigquery.DatasetMetadata{Location: "US"}); err != nil {
 		return err
 	}
 	return nil
 }
 
+// CreateTable -
 func (c Client) CreateTable(dataset, table string, schema map[string]string) error {
 	initial := c.bq.Dataset(dataset)
 
@@ -136,14 +143,13 @@ func (c Client) CreateTable(dataset, table string, schema map[string]string) err
 			bqSchema = append(bqSchema, &bigquery.FieldSchema{Name: k, Repeated: true, Required: false, Type: bigquery.RecordFieldType})
 
 		}
-
 	}
 
-	/*schema1 := bigquery.Schema{
-	  &bigquery.FieldSchema{Name: "Name", Required: true, Type: bigquery.StringFieldType},
-	  &bigquery.FieldSchema{Name: "Grades", Repeated: true, Type: bigquery.IntegerFieldType},*/
+	md := &bigquery.TableMetadata{
+		Schema: bqSchema,
+	}
 
-	err := initial.Table(table).Create(*c.ctx, bqSchema)
+	err := initial.Table(table).Create(*c.ctx, md)
 	if err != nil {
 		return err
 	}
@@ -151,6 +157,7 @@ func (c Client) CreateTable(dataset, table string, schema map[string]string) err
 	return nil
 }
 
+// DeleteTable -
 func (c Client) DeleteTable(dataset, table string) error {
 	initial := c.bq.Dataset(dataset)
 	err := initial.Table(table).Delete(*c.ctx)
@@ -162,6 +169,7 @@ func (c Client) DeleteTable(dataset, table string) error {
 	return nil
 }
 
+// CreateClient -
 func CreateClient(project string) (*Client, error) {
 	ctx := context.Background()
 	client, err := bigquery.NewClient(ctx,

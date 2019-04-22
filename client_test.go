@@ -2,11 +2,19 @@ package bqclient
 
 import (
 	"fmt"
+	"os"
 	"testing"
 )
 
+const TestApp = "managed-systems"
+
+func TestMain(m *testing.M) {
+	// call flag.Parse() here if TestMain uses flags
+	os.Exit(m.Run())
+}
+
 func TestCreateTable(t *testing.T) {
-	client, err := CreateClient("funapp-xyz")
+	client, err := CreateClient(TestApp)
 	if err != nil {
 		t.Fatalf("Could not create client: %s", err)
 	}
@@ -26,7 +34,7 @@ func TestCreateTable(t *testing.T) {
 }
 
 func TestInsertRows(t *testing.T) {
-	client, err := CreateClient("funapp-xyz")
+	client, err := CreateClient(TestApp)
 	if err != nil {
 		t.Fatalf("Could not create client: %s", err)
 	}
@@ -60,12 +68,13 @@ func TestInsertRows(t *testing.T) {
 }
 
 func TestQuery(t *testing.T) {
-	client, err := CreateClient("funapp-xyz")
+	client, err := CreateClient(TestApp)
 	if err != nil {
 		t.Fatalf("Could not create client: %s", err)
 	}
 
-	results, err := client.Query("SELECT * FROM [funapp-xyz:testing.test2]", 10)
+	results, err := client.Query(
+		fmt.Sprintf("SELECT * FROM `%s.testing.test2`", TestApp), 10)
 
 	if err != nil {
 		t.Fatalf("Could not query table: %s", err)
