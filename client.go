@@ -14,10 +14,23 @@ import (
 
 var logger = loggo.GetLogger("bigquery")
 
+type Value = bigquery.Value
+
 // Client -
 type Client struct {
 	bq  *bigquery.Client
 	ctx *context.Context
+}
+
+// CleanRow -
+type CleanRow struct {
+	Data     map[string]Value
+	InsertID string
+}
+
+// Save -
+func (r CleanRow) Save() (row map[string]bigquery.Value, insertID string, err error) {
+	return r.Data, r.InsertID, nil
 }
 
 // Row -
@@ -53,6 +66,24 @@ func (c Client) InsertRows(dataset, table string, data []Row) error {
 
 	u := tbl.Uploader()
 	if err := u.Put(*c.ctx, data); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// InsertRowsID -
+func (c Client) InsertRowsID(dataset, table string, data []CleanRow) error {
+	initial := c.bq.Dataset(dataset)
+	tbl := initial.Table(table)
+
+	u := tbl.Uploader()
+	if err := u.Put(*c.ctx, data); err != nil {
+		if multiErr, ok := err.(bigquery.PutMultiError); ok {
+			for _, val := range multiErr {
+				logger.Errorf("Row insert error: %s", val.Error())
+			}
+		}
 		return err
 	}
 
