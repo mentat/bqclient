@@ -9,7 +9,6 @@ import (
 	"cloud.google.com/go/bigquery"
 
 	"google.golang.org/api/iterator"
-	"google.golang.org/api/option"
 )
 
 var logger = loggo.GetLogger("bigquery")
@@ -212,9 +211,7 @@ func (c Client) DeleteTable(dataset, table string) error {
 func CreateClient(project string) (*Client, error) {
 	ctx := context.Background()
 	client, err := bigquery.NewClient(ctx,
-		project,
-		option.WithServiceAccountFile("client_secret.json"))
-
+		project)
 	if err != nil {
 		return nil, err
 	}
