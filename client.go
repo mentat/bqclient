@@ -17,9 +17,9 @@ type Value = bigquery.Value
 
 // Client -
 type Client struct {
-	bq  *bigquery.Client
-	ctx *context.Context
-	SkipInvalidRows bool
+	bq                  *bigquery.Client
+	ctx                 *context.Context
+	SkipInvalidRows     bool
 	IgnoreUnknownValues bool
 }
 
@@ -53,8 +53,8 @@ func (c Client) InsertRow(dataset, table string, data Row) error {
 	tbl := initial.Table(table)
 
 	u := tbl.Inserter()
-        u.SkipInvalidRows = c.SkipInvalidRows
-        u.IgnoreUnknownValues = c.IgnoreUnknownValues
+	u.SkipInvalidRows = c.SkipInvalidRows
+	u.IgnoreUnknownValues = c.IgnoreUnknownValues
 	if err := u.Put(*c.ctx, data); err != nil {
 		return err
 	}
@@ -68,8 +68,8 @@ func (c Client) InsertRows(dataset, table string, data []Row) error {
 	tbl := initial.Table(table)
 
 	u := tbl.Inserter()
-        u.SkipInvalidRows = c.SkipInvalidRows
-        u.IgnoreUnknownValues = c.IgnoreUnknownValues
+	u.SkipInvalidRows = c.SkipInvalidRows
+	u.IgnoreUnknownValues = c.IgnoreUnknownValues
 	if err := u.Put(*c.ctx, data); err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (c Client) InsertRowsID(dataset, table string, data []CleanRow) error {
 	if err := u.Put(*c.ctx, data); err != nil {
 		if multiErr, ok := err.(bigquery.PutMultiError); ok {
 			for _, val := range multiErr {
-				logger.Errorf("Row insert error: %s", val.Error())
+				logger.Debugf("Row insert error: %s", val.Error())
 			}
 		}
 		return err
